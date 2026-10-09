@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="vi" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Quản Lý Kho Hàng Hóa (Demo LocalStorage)</title>
+  <meta name="description" content="Ứng dụng quản lý tồn kho lưu trữ trên LocalStorage của trình duyệt - Bài tập thực hành buổi AI Coffee Talk">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <!-- ==========================================================================
+       LOCK SCREEN OVERLAY (FANCY PASSWORD GATEWAY)
+       ========================================================================== -->
+  <div class="lock-screen-overlay" id="lockScreen">
+    <div class="lock-card" id="lockCard">
+      <div class="lock-icon-box">
+        <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect width="18" height="11" x="3" y="11" rx="2" ry="2"></rect>
+          <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+        </svg>
+      </div>
+      <h2 class="lock-title">KHO HÀNG SOTRANS</h2>
+      <p class="lock-subtitle">Cổng truy cập dữ liệu nội bộ bảo mật</p>
+      
+      <form id="lockForm" class="lock-form">
+        <div class="lock-input-wrap">
+          <input type="password" id="passwordInput" placeholder="Nhập mật mã truy cập..." autocomplete="off" autofocus required>
+          <button type="button" class="btn-toggle-pwd" id="btnTogglePwd" title="Hiện/ẩn mật khẩu">
+            <svg id="eyeIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"></path>
+              <circle cx="12" cy="12" r="3"></circle>
+            </svg>
+          </button>
+        </div>
+        <div class="lock-error-msg" id="lockErrorMsg">Mật khẩu không chính xác! Vui lòng thử lại.</div>
+        <button type="submit" class="btn btn-primary lock-submit-btn">
+          <span>Mở Khóa Hệ Thống</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>
+        </button>
+      </form>
+      
+      <div class="lock-hint">
+        Chưa có mã truy cập? <strong>Hãy hỏi Admin</strong>
+      </div>
+    </div>
+  </div>
+
+  <div class="container">
+    <!-- APP HEADER -->
+    <header class="app-header">
+      <div class="brand-wrapper">
+        <div class="brand-icon">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"></path>
+            <path d="m3.3 7 8.7 5 8.7-5"></path>
+            <path d="M12 22V12"></path>
+          </svg>
+        </div>
+        <div class="brand-title">
+          <h1>
+            Kho Hàng Hóa SOTRANS
+            <span class="badge-storage">Enterprise WMS</span>
+          </h1>
+          <div class="brand-subtitle">Hệ thống kiểm soát tồn kho nội bộ • Live Inventory System</div>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <button class="btn btn-secondary btn-sm" id="btnLockScreen" title="Khóa màn hình để demo">
+          <span>🔒 Khóa</span>
+        </button>
+        <button class="btn btn-secondary btn-sm" id="themeToggleBtn" title="Đổi giao diện Sáng / Tối">
+          <span id="themeLabel">🌙 Chế độ tối</span>
+        </button>
+        <button class="btn btn-primary" id="btnOpenAddModal">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+          <span>+ Thêm Hàng Mới</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- STATS SUMMARY CARDS -->
+    <div class="stats-grid">
+      <div class="stat-card blue">
+        <div class="stat-info">
+          <span class="stat-label">Tổng Mặt Hàng (SKU)</span>
+          <span class="stat-value" id="statTotalSku">0</span>
+          <span class="stat-desc">Đang quản lý trong kho</span>
+        </div>
+        <div class="stat-icon">📦</div>
+      </div>
+
+      <div class="stat-card green">
+        <div class="stat-info">
+          <span class="stat-label">Còn Nhiều Hàng (>10)</span>
+          <span class="stat-value" id="statHighStock">0</span>
+          <span class="stat-desc">Dồi dào số lượng</span>
+        </div>
+        <div class="stat-icon">🟢</div>
+      </div>
+
+      <div class="stat-card amber">
+        <div class="stat-info">
+          <span class="stat-label">Sắp Hết Hàng (1 - 5)</span>
+          <span class="stat-value" id="statLowStock">0</span>
+          <span class="stat-desc">Cần kế hoạch nhập thêm</span>
+        </div>
+        <div class="stat-icon">🟠</div>
+      </div>
+
+      <div class="stat-card red">
+        <div class="stat-info">
+          <span class="stat-label">Đã Hết Hàng (= 0)</span>
+          <span class="stat-value" id="statOutStock">0</span>
+          <span class="stat-desc">Mặt hàng đang tồn 0</span>
+        </div>
+        <div class="stat-icon">🔴</div>
+      </div>
+    </div>
+
+    <!-- MAIN DATA TABLE CARD -->
+    <div class="main-card">
+      <!-- Toolbar Filters -->
+      <div class="toolbar">
+        <div class="toolbar-left">
+          <div class="search-box">
+            <svg class="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
+            <input type="text" id="searchInput" placeholder="Tìm theo tên hàng hóa hoặc mã SKU...">
+          </div>
+
+          <div class="filter-pills" id="statusFilterPills">
+            <button class="filter-btn active" data-status="all">Tất cả (<span id="pillCountAll">0</span>)</button>
+            <button class="filter-btn" data-status="high">Còn nhiều (<span id="pillCountHigh">0</span>)</button>
+            <button class="filter-btn" data-status="normal">Bình thường (<span id="pillCountNormal">0</span>)</button>
+            <button class="filter-btn" data-status="low">Gần hết (<span id="pillCountLow">0</span>)</button>
+            <button class="filter-btn" data-status="out">Hết hàng (<span id="pillCountOut">0</span>)</button>
+          </div>
+
+          <select class="select-box" id="unitSelect">
+            <option value="">Tất cả ĐVT</option>
+          </select>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="font-size: 12px; color: var(--text-muted);">Hiển thị:</span>
+          <select class="select-box" id="pageSizeSelect" style="width: 75px;">
+            <option value="15">15</option>
+            <option value="30">30</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Table -->
+      <div class="table-responsive">
+        <table class="table">
+          <thead>
+            <tr>
+              <th style="width: 90px;">Mã SKU</th>
+              <th>Tên Hàng Hóa</th>
+              <th style="width: 100px;">Đơn Vị (ĐVT)</th>
+              <th class="text-right" style="width: 140px;">Số Lượng Tồn</th>
+              <th class="text-center" style="width: 140px;">Tình Trạng</th>
+              <th class="text-right" style="width: 150px;">Thao Tác Nhanh</th>
+            </tr>
+          </thead>
+          <tbody id="productTbody">
+            <!-- Rendered by app.js -->
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination -->
+      <div class="pagination">
+        <span class="page-info" id="paginationInfo">Đang tải...</span>
+        <div class="page-btns" id="paginationControls"></div>
+      </div>
+    </div>
+
+    <!-- DEMO TEACHING CONTROLS (FOOTER BAR) -->
+    <div class="demo-tools-box">
+      <div class="demo-title">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>
+        <span>Công cụ phục vụ Demo buổi học:</span>
+      </div>
+      <div class="demo-actions">
+        <button class="btn btn-secondary btn-sm" id="btnSeedExcel" title="Khôi phục lại danh sách 320 sản phẩm từ file Excel vào LocalStorage máy này">
+          <span>⚡ Nạp 320 món từ Excel</span>
+        </button>
+        <button class="btn btn-secondary btn-sm" id="btnClearStorage" title="Mô phỏng máy của học viên khi mở lần đầu tiên (LocalStorage trống)">
+          <span>🗑️ Xóa sạch (Giả lập máy mới)</span>
+        </button>
+        <button class="btn btn-secondary btn-sm" id="btnViewJson" title="Xem chuỗi JSON thực tế đang lưu trong LocalStorage">
+          <span>👁️ Xem mã JSON trong LocalStorage</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==========================================================================
+       MODAL 1: THÊM / SỬA HÀNG HÓA
+       ========================================================================== -->
+  <div class="modal-overlay" id="productModal">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3 class="modal-title" id="modalTitle">Thêm Mặt Hàng Mới</h3>
+        <button class="modal-close" onclick="app.closeModal('productModal')">✕</button>
+      </div>
+      <form id="productForm">
+        <div class="modal-body">
+          <input type="hidden" id="editId">
+          <div class="form-group">
+            <label>Tên Hàng Hóa <span style="color: var(--danger)">*</span></label>
+            <input type="text" class="form-control" id="formName" required placeholder="VD: BỘ BÀN GHẾ TRƯNG BÀY OPPO...">
+          </div>
+          <div class="form-group">
+            <label>Đơn Vị Tính (ĐVT)</label>
+            <input type="text" class="form-control" id="formUnit" placeholder="KIỆN, THÙNG, CÁI, BỘ..." value="KIỆN">
+          </div>
+          <div class="form-group">
+            <label>Số Lượng Tồn Kho <span style="color: var(--danger)">*</span></label>
+            <input type="number" step="any" min="0" class="form-control" id="formQty" required value="10">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" onclick="app.closeModal('productModal')">Hủy</button>
+          <button type="submit" class="btn btn-primary">Lưu Vào LocalStorage</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ==========================================================================
+       MODAL 2: XEM JSON TRONG LOCALSTORAGE
+       ========================================================================== -->
+  <div class="modal-overlay" id="jsonModal">
+    <div class="modal-box" style="max-width: 650px;">
+      <div class="modal-header">
+        <h3 class="modal-title">Dữ Liệu Thô Đang Lưu Trong LocalStorage</h3>
+        <button class="modal-close" onclick="app.closeModal('jsonModal')">✕</button>
+      </div>
+      <div class="modal-body">
+        <p style="font-size: 12px; color: var(--text-muted); margin-bottom: 8px;">
+          Key lưu trữ: <code>danh_sach_hang_hoa</code> • Trình duyệt của bạn đang lưu chuỗi JSON này:
+        </p>
+        <textarea id="jsonViewer" class="form-control" style="height: 300px; font-family: var(--font-mono); font-size: 11px; resize: vertical;" readonly></textarea>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" onclick="app.closeModal('jsonModal')">Đóng</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOAST NOTIFICATION -->
+  <div class="toast-box" id="toast">
+    <span id="toastIcon">✓</span>
+    <span id="toastMsg">Thao tác thành công</span>
+  </div>
+
+  <!-- SCRIPTS -->
+  <!-- 1. Dữ liệu trích xuất từ Excel (chỉ dùng khi người dùng ấn nút nạp vào LocalStorage) -->
+  <script src="seed-data.js"></script>
+  <!-- 2. Logic chính tương tác với LocalStorage -->
+  <script src="app.js"></script>
+</body>
+</html>
